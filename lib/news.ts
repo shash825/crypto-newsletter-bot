@@ -31,7 +31,11 @@ function clean(value: string): string {
 }
 
 function tag(item: string, name: string): string {
-  const match = item.match(new RegExp(`<${name}[^>]*>([\s\S]*?)</${name}>`, "i"));
+  // String.raw so the `\s\S` escapes survive the template literal — a plain
+  // template would collapse them to `sS`, silently matching only runs of "s".
+  const match = item.match(
+    new RegExp(String.raw`<${name}[^>]*>([\s\S]*?)</${name}>`, "i"),
+  );
   return match ? clean(match[1]) : "";
 }
 
