@@ -81,8 +81,8 @@ export async function POST(request: Request) {
       {
         error:
           limit.scope === "ip"
-            ? `Rate limit reached — this demo allows 20 requests per 15 minutes per visitor. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.`
-            : `This demo is capped at 150 requests per hour in total and has hit that ceiling. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.`,
+            ? `Rate limit reached — this demo allows 60 requests per 15 minutes per visitor. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.`
+            : `This demo is capped at 200 requests per hour in total and has hit that ceiling. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.`,
       },
       {
         status: 429,

@@ -26,18 +26,22 @@ type Bucket = {
 };
 
 /**
- * 20 requests per 15 minutes per IP. An interviewer poking at this will send
- * a handful; they will not notice the ceiling. A script will hit it in
- * seconds.
+ * 60 requests per 15 minutes per IP.
+ *
+ * Sized for a room, not one person: an office evaluating this shares a single
+ * public IP, so the ceiling has to clear several people trying it at once —
+ * six evaluators sending ten messages each fits. A script attempts thousands
+ * a minute and still trips this immediately.
  */
-const perIp: Bucket = { limit: 20, windowMs: 15 * 60_000, hits: new Map() };
+const perIp: Bucket = { limit: 60, windowMs: 15 * 60_000, hits: new Map() };
 
 /**
- * 150 requests per hour across everyone — the wallet guard. At roughly two
- * or three cents a request that bounds the worst case to a few dollars an
- * hour even if the link gets passed around.
+ * 200 requests per hour across everyone — the wallet guard, and the reason
+ * the per-IP ceiling can afford to be generous. At roughly two or three cents
+ * a request this bounds the worst case to a few dollars an hour even if the
+ * link gets passed around.
  */
-const global: Bucket = { limit: 150, windowMs: 60 * 60_000, hits: new Map() };
+const global: Bucket = { limit: 200, windowMs: 60 * 60_000, hits: new Map() };
 
 /** Stops a flood of unique IPs growing the map without bound. */
 const MAX_TRACKED_KEYS = 10_000;

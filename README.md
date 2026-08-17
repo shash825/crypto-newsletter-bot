@@ -81,10 +81,12 @@ The app is publicly linkable and every request spends real API credit, so [`lib/
 
 | Bucket | Limit | Guards against |
 |---|---|---|
-| Per IP | 20 requests / 15 min | One person hammering the demo |
-| Global | 150 requests / hour | Total spend, however many people arrive |
+| Per IP | 60 requests / 15 min | One visitor hammering the demo |
+| Global | 200 requests / hour | Total spend, however many people arrive |
 
 A newsletter draws 2 from the bucket rather than 1, since it fans out to more data and generates more tokens. Rejections return `429` with a `Retry-After` header and a plain-English message that the UI renders inline.
+
+**Why the per-IP limit is generous.** It's sized for a room, not one person. A company evaluating this shares a single public IP, so a tight per-IP ceiling would lock out an entire office the moment a few people tried it at once — six evaluators sending ten messages each has to fit. A script attempts thousands a minute and trips the limit regardless, so the generous ceiling costs nothing in protection. The global cap is what actually bounds spend, which is what lets the per-IP number be relaxed.
 
 **The honest caveat:** this is in-memory, because "no database" is a project constraint. On serverless that has a real consequence — each Vercel instance keeps its own counters, so with N warm instances the true ceiling is up to N × the limit, and a cold start resets to zero. That is fine for what it defends against (casual abuse, runaway cost on a demo) and inadequate for anything needing an exact limit. The exact version is the same shape backed by Redis, swapping the `Map` for `INCR`/`EXPIRE` against a shared store — roughly a twenty-line change, and the reason the bucket logic is isolated in its own module.
 
