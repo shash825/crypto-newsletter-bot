@@ -75,6 +75,23 @@ To see the degraded path yourself, point the CoinGecko `BASE` constant at a bad 
 
 ---
 
+## Rate limiting
+
+The app is publicly linkable and every request spends real API credit, so [`lib/ratelimit.ts`](lib/ratelimit.ts) enforces two sliding windows, both checked *before* any upstream call so a rejected request costs nothing:
+
+| Bucket | Limit | Guards against |
+|---|---|---|
+| Per IP | 20 requests / 15 min | One person hammering the demo |
+| Global | 150 requests / hour | Total spend, however many people arrive |
+
+A newsletter draws 2 from the bucket rather than 1, since it fans out to more data and generates more tokens. Rejections return `429` with a `Retry-After` header and a plain-English message that the UI renders inline.
+
+**The honest caveat:** this is in-memory, because "no database" is a project constraint. On serverless that has a real consequence — each Vercel instance keeps its own counters, so with N warm instances the true ceiling is up to N × the limit, and a cold start resets to zero. That is fine for what it defends against (casual abuse, runaway cost on a demo) and inadequate for anything needing an exact limit. The exact version is the same shape backed by Redis, swapping the `Map` for `INCR`/`EXPIRE` against a shared store — roughly a twenty-line change, and the reason the bucket logic is isolated in its own module.
+
+The sizing is deliberate: someone trying the demo sends a handful of messages and never notices a ceiling; a script hits it in seconds.
+
+---
+
 ## Why NDJSON instead of plain text
 
 The response needs to carry two things: the answer, and the metadata about which sources were reachable. Streaming raw text gives you the first but leaves nowhere to put the second.
@@ -174,6 +191,7 @@ No accounts, no database, no email sending, and no chat history across sessions.
 ## Limitations worth naming
 
 - **CoinGecko's public tier rate-limits at roughly 5–15 requests/minute.** This app makes 2–3 calls per user request, which is fine for a demo but would need a caching layer or a paid key under real traffic. Removing the cache was a stated requirement here; adding one back is the first thing you'd do in production.
+- **Rate limiting is per-instance, not global.** See the caveat under [Rate limiting](#rate-limiting) — it bounds cost on a demo, it is not an exact ceiling.
 - **Headlines are titles and blurbs, not article bodies.** The model summarizes what the feed gives it. Deeper analysis would mean fetching and parsing article pages.
 - **No test suite.** The upstream contracts (CoinGecko response shape, RSS structure) are the fragile part and would be the first thing worth pinning with recorded fixtures.
 

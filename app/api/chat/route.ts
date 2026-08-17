@@ -12,6 +12,7 @@
 
 import { streamClaude } from "@/lib/claude";
 import { gatherContext, isContextEmpty } from "@/lib/context";
+import { checkRateLimit } from "@/lib/ratelimit";
 import {
   CHAT_SYSTEM,
   NEWSLETTER_REQUEST,
@@ -69,6 +70,24 @@ export async function POST(request: Request) {
           "ANTHROPIC_API_KEY is not set. Add it to .env.local locally, or to the project's environment variables in Vercel.",
       },
       { status: 500 },
+    );
+  }
+
+  // Checked before any upstream call, so a rejected request costs nothing.
+  const limit = checkRateLimit(request, mode);
+  if (!limit.allowed) {
+    const minutes = Math.ceil(limit.retryAfterSeconds / 60);
+    return Response.json(
+      {
+        error:
+          limit.scope === "ip"
+            ? `Rate limit reached — this demo allows 20 requests per 15 minutes per visitor. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.`
+            : `This demo is capped at 150 requests per hour in total and has hit that ceiling. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.`,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(limit.retryAfterSeconds) },
+      },
     );
   }
 
